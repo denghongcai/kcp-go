@@ -2,9 +2,12 @@ package kcp
 
 import (
 	"crypto/sha1"
+	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"runtime/pprof"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +20,21 @@ const salt = "kcptest"
 
 var key = []byte("testkey")
 var fec = 4
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+	os.Exit(m.Run())
+}
 
 func DialTest() (*UDPSession, error) {
 	pass := pbkdf2.Key(key, []byte(salt), 4096, 32, sha1.New)
@@ -61,7 +79,6 @@ func server() {
 	kcplistener := l.(*Listener)
 	kcplistener.SetReadBuffer(16 * 1024 * 1024)
 	kcplistener.SetWriteBuffer(16 * 1024 * 1024)
-	kcplistener.SetDSCP(46)
 	log.Println("listening on:", kcplistener.conn.LocalAddr())
 	for {
 		s, err := l.Accept()
@@ -85,7 +102,6 @@ func handleClient(conn *UDPSession) {
 	conn.SetStreamMode(true)
 	conn.SetWindowSize(1024, 1024)
 	conn.SetNoDelay(1, 20, 2, 1)
-	conn.SetDSCP(46)
 	conn.SetMtu(1450)
 	conn.SetACKNoDelay(false)
 	conn.SetReadDeadline(time.Now().Add(time.Hour))

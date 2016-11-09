@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/denghongcai/faketcp"
+
 	"github.com/pkg/errors"
 
 	"github.com/klauspost/crc32"
@@ -842,13 +844,9 @@ func Listen(laddr string) (net.Listener, error) {
 // ListenWithOptions listens for incoming KCP packets addressed to the local address laddr on the network "udp" with packet encryption,
 // dataShards, parityShards defines Reed-Solomon Erasure Coding parameters
 func ListenWithOptions(laddr string, block BlockCrypt, dataShards, parityShards int) (*Listener, error) {
-	udpaddr, err := net.ResolveUDPAddr("udp", laddr)
+	conn, err := faketcp.Listen("udp", laddr)
 	if err != nil {
-		return nil, errors.Wrap(err, "net.ResolveUDPAddr")
-	}
-	conn, err := net.ListenUDP("udp", udpaddr)
-	if err != nil {
-		return nil, errors.Wrap(err, "net.ListenUDP")
+		return nil, errors.Wrap(err, "faketcp.Listen")
 	}
 
 	return ServeConn(block, dataShards, parityShards, conn)
@@ -889,14 +887,9 @@ func Dial(raddr string) (net.Conn, error) {
 
 // DialWithOptions connects to the remote address "raddr" on the network "udp" with packet encryption
 func DialWithOptions(raddr string, block BlockCrypt, dataShards, parityShards int) (*UDPSession, error) {
-	udpaddr, err := net.ResolveUDPAddr("udp", raddr)
+	udpconn, err := faketcp.Dial("udp", raddr)
 	if err != nil {
-		return nil, errors.Wrap(err, "net.ResolveUDPAddr")
-	}
-
-	udpconn, err := net.DialUDP("udp", nil, udpaddr)
-	if err != nil {
-		return nil, errors.Wrap(err, "net.DialUDP")
+		return nil, errors.Wrap(err, "faketcp.Dial")
 	}
 
 	return NewConn(raddr, block, dataShards, parityShards, &ConnectedUDPConn{udpconn, udpconn})
@@ -922,11 +915,6 @@ func currentMs() uint32 {
 // to Write syscalls that are 4 times faster on some OS'es. This should only be
 // used for connections that were produced by a net.Dial* call.
 type ConnectedUDPConn struct {
-	*net.UDPConn
+	*faketcp.PacketConn
 	Conn net.Conn // underlying connection if any
-}
-
-// WriteTo redirects all writes to the Write syscall, which is 4 times faster.
-func (c *ConnectedUDPConn) WriteTo(b []byte, addr net.Addr) (int, error) {
-	return c.Write(b)
 }
