@@ -79,6 +79,7 @@ func server() {
 	kcplistener := l.(*Listener)
 	kcplistener.SetReadBuffer(16 * 1024 * 1024)
 	kcplistener.SetWriteBuffer(16 * 1024 * 1024)
+	kcplistener.SetDSCP(46)
 	log.Println("listening on:", kcplistener.conn.LocalAddr())
 	for {
 		s, err := l.Accept()
@@ -101,6 +102,7 @@ func init() {
 func handleClient(conn *UDPSession) {
 	conn.SetStreamMode(true)
 	conn.SetWindowSize(1024, 1024)
+	conn.SetDSCP(46)
 	conn.SetNoDelay(1, 20, 2, 1)
 	conn.SetMtu(1450)
 	conn.SetACKNoDelay(false)

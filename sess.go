@@ -14,8 +14,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/klauspost/crc32"
-
-	"golang.org/x/net/ipv4"
 )
 
 type errTimeout struct {
@@ -337,15 +335,17 @@ func (s *UDPSession) SetNoDelay(nodelay, interval, resend, nc int) {
 
 // SetDSCP sets the 6bit DSCP field of IP header, no effect if it's accepted from Listener
 func (s *UDPSession) SetDSCP(dscp int) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.l == nil {
-		if nc, ok := s.conn.(*ConnectedUDPConn); ok {
-			return ipv4.NewConn(nc.Conn).SetTOS(dscp << 2)
-		} else if nc, ok := s.conn.(net.Conn); ok {
-			return ipv4.NewConn(nc).SetTOS(dscp << 2)
+	/*
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.l == nil {
+			if nc, ok := s.conn.(*ConnectedUDPConn); ok {
+				return ipv4.NewConn(nc.Conn).SetTOS(dscp << 2)
+			} else if nc, ok := s.conn.(net.Conn); ok {
+				return ipv4.NewConn(nc).SetTOS(dscp << 2)
+			}
 		}
-	}
+	*/
 	return nil
 }
 
@@ -778,9 +778,11 @@ func (l *Listener) SetWriteBuffer(bytes int) error {
 
 // SetDSCP sets the 6bit DSCP field of IP header
 func (l *Listener) SetDSCP(dscp int) error {
-	if nc, ok := l.conn.(net.Conn); ok {
-		return ipv4.NewConn(nc).SetTOS(dscp << 2)
-	}
+	/*
+		if nc, ok := l.conn.(net.Conn); ok {
+			return ipv4.NewConn(nc).SetTOS(dscp << 2)
+		}
+	*/
 	return nil
 }
 
